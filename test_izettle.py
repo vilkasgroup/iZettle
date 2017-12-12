@@ -2,6 +2,8 @@ import os
 import sys
 import unittest
 import logging
+import uuid
+import time
 from iZettle import Izettle, RequestException
 
 logger = logging.getLogger()
@@ -44,6 +46,24 @@ class TestIzettle(unittest.TestCase):
         exception = re.exception
         self.assertEqual(exception.msg, "Invalid response")
         self.assertEqual(exception.request.status_code, 400)
+
+    def test_product(self):
+        uuid1 = str(uuid.uuid1())
+        self.assertIsNotNone(self.client.create_product({
+            'name': 'product1',
+            'uuid': uuid1,
+        }))
+
+        # after product is sent to iZettle, it's not immediately usable
+        #time.sleep(1)
+
+        # TODO, name and uuid with get method
+
+        self.assertIsNotNone(self.client.update_product(uuid1, {
+            'name': 'updated product name',
+        }))
+
+        # TODO, name and uuid with get method
 
 
 if __name__ == '__main__':
