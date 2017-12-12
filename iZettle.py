@@ -1,9 +1,12 @@
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RequestException(Exception):
-    # TODO: evaluate, if we really need our own exception, or should we just
-    # use Exception instead?
+    """ Exception raised when a request to iZettle API fails.
+    This exception also incules the request object """
     def __init__(self, msg, request, *args, **kwargs):
         super(RequestException, self).__init__(*args, **kwargs)
         self.msg = msg
@@ -23,23 +26,47 @@ class Izettle:
         self.auth()
 
     def auth(self):
-        """ get authentication token from izettle API.
-        Raises RequestException """
-        # TODO: Check if we have token already, and try to refresh that one
+        """ Authenticate the session. Session is valid for 7200 seconds """
+        if(self.__token):
+            logger.info('refresh existing token.')
+            request = self._refresh_token()
+        else:
+            logger.info('get new token.')
+            request = self._get_new_token()
+
+        response = request.json()
+        self.__token = response['access_token']
+        if(not self.__token):
+            raise RequestException("Token missing", request)
+
+    def _get_new_token(self):
+        """ get a new authentication token from iZettle API. """
         data = {
             'grant_type': 'password',
-            'client_id': self.__client_id,
-            'client_secret': self.__client_secret,
             'username': self.__user,
             'password': self.__password
         }
+        return self._request(data)
+
+    def _refresh_token(self):
+        """ Refresh existing token form iZettle API. """
+        data = {
+            'grant_type': 'refresh_token',
+            'refresh_token': self.__token,
+        }
+        return self._request(data)
+
+    def _request(self, data):
+        """ Do a post request to iZettle API with client id and secret
+        appended to the data. Raises RequestException """
+        data['client_id'] = self.__client_id
+        data['client_secret'] = self.__client_secret
+
+        logger.info("do request with data {}".format(data))
         r = requests.post(Izettle.url, data=data)
+        logger.info("got response {}".format(r.text))
 
         if(r.status_code != 200):
             raise RequestException("Invalid response", r)
 
-        json_response = r.json()
-        self.__token = json_response['access_token']
-
-        if(not self.__token):
-            raise RequestException("Token missing", r)
+        return r

@@ -1,6 +1,13 @@
 import os
+import sys
 import unittest
+import logging
 from iZettle import Izettle, RequestException
+
+logger = logging.getLogger()
+logger.level = logging.DEBUG
+stream_handler = logging.StreamHandler(sys.stdout)
+logger.addHandler(stream_handler)
 
 
 class TestIzettle(unittest.TestCase):
@@ -27,13 +34,17 @@ class TestIzettle(unittest.TestCase):
         self.assertIsNotNone(self.client._Izettle__password)
 
     def test_auth(self):
-        """ Test that we get token from izettle API """
+        """ Test that we got token from izettle API """
+        self.assertIsNotNone(self.client._Izettle__token)
+
+    def test_refresh_token(self):
+        self.client._refresh_token()
         self.assertIsNotNone(self.client._Izettle__token)
 
     def test_invalid_client_id(self):
-        """ Test client creation with invalid (empty) parameters """
+        """ Test client creation with invalid parameters """
         with self.assertRaises(RequestException) as re:
-            Izettle()
+            Izettle(client_id='invalid')
         exception = re.exception
         self.assertEqual(exception.msg, "Invalid response")
         self.assertEqual(exception.request.status_code, 400)
