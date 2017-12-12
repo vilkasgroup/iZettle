@@ -37,10 +37,6 @@ class TestIzettle(unittest.TestCase):
         """ Test that we got token from izettle API """
         self.assertIsNotNone(self.client._Izettle__token)
 
-    def test_refresh_token(self):
-        self.client._refresh_token()
-        self.assertIsNotNone(self.client._Izettle__token)
-
     def test_invalid_client_id(self):
         """ Test client creation with invalid parameters """
         with self.assertRaises(RequestException) as re:

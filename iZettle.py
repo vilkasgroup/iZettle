@@ -27,34 +27,16 @@ class Izettle:
 
     def auth(self):
         """ Authenticate the session. Session is valid for 7200 seconds """
-        if(self.__token):
-            logger.info('refresh existing token.')
-            request = self._refresh_token()
-        else:
-            logger.info('get new token.')
-            request = self._get_new_token()
-
-        response = request.json()
-        self.__token = response['access_token']
-        if(not self.__token):
-            raise RequestException("Token missing", request)
-
-    def _get_new_token(self):
-        """ get a new authentication token from iZettle API. """
         data = {
             'grant_type': 'password',
             'username': self.__user,
             'password': self.__password
         }
-        return self._request(data)
-
-    def _refresh_token(self):
-        """ Refresh existing token form iZettle API. """
-        data = {
-            'grant_type': 'refresh_token',
-            'refresh_token': self.__token,
-        }
-        return self._request(data)
+        request = self._request(data)
+        response = request.json()
+        self.__token = response['access_token']
+        if(not self.__token):
+            raise RequestException("Token missing", request)
 
     def _request(self, data):
         """ Do a post request to iZettle API with client id and secret
