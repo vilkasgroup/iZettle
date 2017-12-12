@@ -1,0 +1,16 @@
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+### Emacs ###
+# -*- mode: gitignore; -*-
+*~
+\#*\#
+auto-save-list
+tramp
+.\#*
+
+
+Pipfile.lock
