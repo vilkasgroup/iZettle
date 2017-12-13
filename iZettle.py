@@ -33,7 +33,6 @@ class Izettle:
     ... )
     >>> uuid1 = str(uuid.uuid1())
     >>> client.create_product({'name': 'new product', 'uuid': uuid1})
-    {}
     >>> # name is mandatory, but uuid is not
     >>> client.get_product(uuid1)
     {'uuid': '1cc7fa84-dfb0-11e7-86aa-e4a7a083a65d','name': 'new product' ... }
@@ -41,6 +40,7 @@ class Izettle:
     """
     oauth_url = "https://oauth.izettle.net/token"  # note .net vs .com
     base_url = "https://{}.izettle.com/organizations/self/{}"
+    seconds_the_session_is_valid = 7140  # it's actually valid for 7200 seconds...
 
     def __init__(self, client_id="", client_secret="", user="", password=""):
         """ initialize Izettle object that has token and is ready to use. """
@@ -50,10 +50,6 @@ class Izettle:
         self.__password = password
         self.__token = None
         self.__valid_until = 0
-
-        # The session is valid for 7200 seconds. Tests may want to change it, so
-        # I use it as a variable, but you shouldn't need to touch it in normal use.
-        self.__seconds_the_session_is_valid = 7140
         self.auth()
 
     def _authenticate_request(f):
@@ -68,7 +64,6 @@ class Izettle:
                 "Authorization": "Bearer {}".format(self.__token),
                 'Content-Type': 'application/json'
             }
-            logger.info("request header {}".format(headers))
             response = f(self, *args, headers=headers, **kwargs)
 
             # TODO: if the API responses, that the session in no longer valid
@@ -144,8 +139,6 @@ class Izettle:
     @_response_handler
     @_authenticate_request
     def get_product(self, uuid, data={}, headers={}):
-        logger.info('\nUUID:')
-        logger.info(uuid)
         url = Izettle.base_url.format('products', 'products/' + uuid)
         return requests.get(url, headers=headers)
 
@@ -173,4 +166,4 @@ class Izettle:
         self.__token = response['access_token']
         if(not self.__token):
             raise RequestException("Token missing", request)
-        self.__valid_until = time.time() + self.__seconds_the_session_is_valid
+        self.__valid_until = time.time() + Izettle.seconds_the_session_is_valid

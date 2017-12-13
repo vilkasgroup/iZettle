@@ -80,10 +80,13 @@ class TestIzettle(unittest.TestCase):
         # see that it still works if the client thinks that the session
         # has expired.
         #
+        # TODO: assert if it actually refreshed the session
+        # https://stackoverflow.com/questions/3829742/assert-that-a-method-was-called-in-a-python-unit-test
+        #
         # TODO. Try also setting the session valid time to bigger than 7200
         # seconds, then wait for 7200 seconds to test if it can handle that
         # too (it should, but it hasn't been tested yet).
-        self.client._Izettle__seconds_the_session_is_valid = 1
+        Izettle.seconds_the_session_is_valid = 1
         self.client.auth()
         time.sleep(2)
         self.client.get_all_products()
