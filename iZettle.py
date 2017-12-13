@@ -3,6 +3,7 @@ import logging
 import json
 import uuid
 import time
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,9 @@ class RequestException(Exception):
 
 class Izettle:
     """ This class handles session and has helper method for most of the
-    api methods provided by iZettle in https://github.com/iZettle/api-documentation.
-    All method take payload data as defined in the API and they all return the JSON from
-    the API as-is in dictionary form.
+    api methods provided by iZettle API.
+    All method pass the payload as-is and returns results as-is (with JSON
+    encoding/decoding and some error handling by raising RequestException)
 
     example usage:
     >>> from iZettle import Izettle, RequestException
@@ -31,20 +32,15 @@ class Izettle:
     ...     user=os.environ['IZETTLE_USER'],
     ...     password=os.environ['IZETTLE_PASSWORD'],
     ... )
-    >>> uuid1 = str(uuid.uuid1())
-    >>> client.create_product({'name': 'new product', 'uuid': uuid1})
-    >>> # name is mandatory, but uuid is not
-    >>> client.get_product(uuid1)
-    {'uuid': '1cc7fa84-dfb0-11e7-86aa-e4a7a083a65d','name': 'new product' ... }
-    >>> client.delete_product(uuid1)
+    >>> client.create_product({'name': 'new product'})
     """
-    oauth_url = "https://oauth.izettle.net/token"  # note .net vs .com
+    oauth_url = "https://oauth.izettle.net/token"
     base_url = "https://{}.izettle.com/organizations/self/{}"
     seconds_the_session_is_valid = 7140  # it's actually valid for 7200 seconds...
     timeout = 30
 
     def __init__(self, client_id="", client_secret="", user="", password=""):
-        """ initialize Izettle object that has token and is ready to use. """
+        """ Initialize Izettle objec and create sessions. """
         self.__client_id = client_id
         self.__client_secret = client_secret
         self.__user = user
@@ -56,6 +52,7 @@ class Izettle:
     def _authenticate_request(f):
         """ Decorator that adds the auth token to the request header
         and refreshes the token if needed """
+        @wraps(f)
         def __authenticate_request(self, *args, **kwargs):
             if(self.__valid_until < time.time()):
                 logger.info("session is no longer valid. re-auhtorize!")
@@ -75,6 +72,7 @@ class Izettle:
 
     def _response_handler(f):
         """ Decorator that handles responses (throw errors etc, decode json etc.) """
+        @wraps(f)
         def __response_handler(self, *args, **kwargs):
             request = f(self, *args, **kwargs)
             logger.info("response status code {}".format(request.status_code))
@@ -90,12 +88,7 @@ class Izettle:
     @_response_handler
     @_authenticate_request
     def create_product(self, data={}, headers={}):
-        """ create a new product (POST)
-        exmpale with mandatory fields:
-        >>> client = Izettle(...)  # See __init__
-        >>> client.create_product({'name': 'name', 'vatPercentage': 0})
-        See more: https://github.com/iZettle/api-documentation/blob/master/product-library.adoc
-        """
+        """ create a new product (POST) """
         if 'uuid' not in data:
             data['uuid'] = str(uuid.uuid1())
 
@@ -117,11 +110,7 @@ class Izettle:
     @_response_handler
     @_authenticate_request
     def update_product(self, uuid, data={}, headers={}):
-        """ update excisting product (PUT)
-        example:
-        >>> client.update_product(uuid, {'name': 'new name'})
-        See more: https://github.com/iZettle/api-documentation/blob/master/product-library.adoc
-        """
+        """ update excisting product (PUT) """
         headers['If-Match'] = '*'
 
         url = Izettle.base_url.format('products', 'products/v2/' + uuid)
@@ -146,7 +135,7 @@ class Izettle:
     @_response_handler
     @_authenticate_request
     def delete_product(self, uuid, data={}, headers={}):
-        """delete a single product """
+        """ delete a single product """
         url = Izettle.base_url.format('products', 'products/' + uuid)
         return requests.delete(url, headers=headers, timeout=Izettle.timeout)
 
