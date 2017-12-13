@@ -36,7 +36,6 @@ class Izettle:
     """
     oauth_url = "https://oauth.izettle.net/token"
     base_url = "https://{}.izettle.com/organizations/self/{}"
-    seconds_the_session_is_valid = 7140  # it's actually valid for 7200 seconds...
     timeout = 30
 
     def __init__(self, client_id="", client_secret="", user="", password=""):
@@ -46,7 +45,8 @@ class Izettle:
         self.__user = user
         self.__password = password
         self.__token = None
-        self.__valid_until = 0
+        self.__refresh_token = None
+        self.__session_valid_until = 0
         self.auth()
 
     def _authenticate_request(f):
@@ -54,19 +54,23 @@ class Izettle:
         and refreshes the token if needed """
         @wraps(f)
         def __authenticate_request(self, *args, **kwargs):
-            if(self.__valid_until < time.time()):
-                logger.info("session is no longer valid. re-auhtorize!")
+            if(self.__session_valid_until < time.time()):
+                logger.info("session expired. re-auhtorize!")
                 self.auth()
 
             headers = {
                 "Authorization": "Bearer {}".format(self.__token),
                 'Content-Type': 'application/json'
             }
-            logger.info('do request {}'.format(f))
+            logger.info('call function {}'.format(f.__name__))
             response = f(self, *args, headers=headers, **kwargs)
 
-            # TODO: if the API responses, that the session in no longer valid
-            # refresh the token here, and re-do the request.
+            if(response.status_code == 401):
+                if(response.json()['errorType'] == 'ACCESS_TOKEN_EXPIRED'):
+                    logger.info('session expired. re-authorize and try again!')
+                    self.auth()
+                    response = f(self, *args, headers=headers, **kwargs)
+
             return response
         return __authenticate_request
 
@@ -148,20 +152,27 @@ class Izettle:
 
     def auth(self):
         """ Authenticate the session. Session is valid for 7200 seconds """
-        data = {
-            'grant_type': 'password',
-            'username': self.__user,
-            'password': self.__password,
-            'client_id': self.__client_id,
-            'client_secret': self.__client_secret,
-        }
+        if(self.__refresh_token):
+            data = {
+                'grant_type': 'refresh_token',
+                'refresh_token': self.__refresh_token
+            }
+        else:
+            data = {
+                'grant_type': 'password',
+                'username': self.__user,
+                'password': self.__password,
+            }
+
+        data['client_id'] = self.__client_id,
+        data['client_secret'] = self.__client_secret,
         request = requests.post(Izettle.oauth_url, data=data, timeout=Izettle.timeout)
 
         if(request.status_code != 200):
             raise RequestException("Invalid response", request)
 
+        logger.info('session authorized: {}'.format(request.text))
         response = request.json()
         self.__token = response['access_token']
-        if(not self.__token):
-            raise RequestException("Token missing", request)
-        self.__valid_until = time.time() + Izettle.seconds_the_session_is_valid
+        self.__refresh_token = response['refresh_token']
+        self.__session_valid_until = time.time() + response['expires_in'] - 60

@@ -82,22 +82,6 @@ class TestIzettle(unittest.TestCase):
         self.client.delete_product_list({'uuid': [uuid1, uuid2]})
         self.assertEqual(len(self.client.get_all_products()), current_product_amount)
 
-    def test_expired_session(self):
-        # Normaly the session is valid for 7200 seconds, but I want to
-        # see that it still works if the client thinks that the session
-        # has expired.
-        #
-        # TODO: assert if it actually refreshed the session
-        # https://stackoverflow.com/questions/3829742/assert-that-a-method-was-called-in-a-python-unit-test
-        #
-        # TODO. Try also setting the session valid time to bigger than 7200
-        # seconds, then wait for 7200 seconds to test if it can handle that
-        # too (it should, but it hasn't been tested yet).
-        Izettle.seconds_the_session_is_valid = 1
-        self.client.auth()
-        time.sleep(2)
-        self.client.get_all_products()
-
 
 if __name__ == '__main__':
     unittest.main()
