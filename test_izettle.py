@@ -73,7 +73,14 @@ class TestIzettle(unittest.TestCase):
         deleted_product = self.client.get_product(uuid1)
         self.assertFalse(deleted_product)
 
-        # TODO, add delete method, so it wont make so many objects...
+        uuid2 = str(uuid.uuid1())
+        self.assertNotEqual(uuid1, uuid2)
+        current_product_amount = len(self.client.get_all_products())
+        self.client.create_product({'name': '1', 'uuid': uuid1})
+        self.client.create_product({'name': '2', 'uuid': uuid2})
+        self.assertEqual(len(self.client.get_all_products()), current_product_amount + 2)
+        self.client.delete_product_list({'uuid': [uuid1, uuid2]})
+        self.assertEqual(len(self.client.get_all_products()), current_product_amount)
 
     def test_expired_session(self):
         # Normaly the session is valid for 7200 seconds, but I want to

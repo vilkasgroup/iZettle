@@ -41,6 +41,7 @@ class Izettle:
     oauth_url = "https://oauth.izettle.net/token"  # note .net vs .com
     base_url = "https://{}.izettle.com/organizations/self/{}"
     seconds_the_session_is_valid = 7140  # it's actually valid for 7200 seconds...
+    timeout = 30
 
     def __init__(self, client_id="", client_secret="", user="", password=""):
         """ initialize Izettle object that has token and is ready to use. """
@@ -64,6 +65,7 @@ class Izettle:
                 "Authorization": "Bearer {}".format(self.__token),
                 'Content-Type': 'application/json'
             }
+            logger.info('do request {}'.format(f))
             response = f(self, *args, headers=headers, **kwargs)
 
             # TODO: if the API responses, that the session in no longer valid
@@ -109,7 +111,7 @@ class Izettle:
 
         url = Izettle.base_url.format('products', 'products')
         json_data = json.dumps(data)
-        request = requests.post(url, data=json_data, headers=headers)
+        request = requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
         return request
 
     @_response_handler
@@ -120,13 +122,11 @@ class Izettle:
         >>> client.update_product(uuid, {'name': 'new name'})
         See more: https://github.com/iZettle/api-documentation/blob/master/product-library.adoc
         """
-
-        # TODO, decorator should handle this, if UUID is provided
         headers['If-Match'] = '*'
 
         url = Izettle.base_url.format('products', 'products/v2/' + uuid)
         json_data = json.dumps(data)
-        request = requests.put(url, data=json_data, headers=headers)
+        request = requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
         return request
 
     @_response_handler
@@ -134,19 +134,28 @@ class Izettle:
     def get_all_products(self, data={}, headers={}):
         """ get all products. Note: This does not take any parameters """
         url = Izettle.base_url.format('products', 'products')
-        return requests.get(url, headers=headers)
+        return requests.get(url, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
     def get_product(self, uuid, data={}, headers={}):
+        """ get single product with uuid """
         url = Izettle.base_url.format('products', 'products/' + uuid)
-        return requests.get(url, headers=headers)
+        return requests.get(url, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
     def delete_product(self, uuid, data={}, headers={}):
+        """delete a single product """
         url = Izettle.base_url.format('products', 'products/' + uuid)
-        return requests.delete(url, headers=headers)
+        return requests.delete(url, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    def delete_product_list(self, data={}, headers={}):
+        """ delete multiple products """
+        url = Izettle.base_url.format('products', 'products')
+        return requests.delete(url, params=data, headers=headers, timeout=Izettle.timeout)
 
     def auth(self):
         """ Authenticate the session. Session is valid for 7200 seconds """
@@ -157,7 +166,7 @@ class Izettle:
             'client_id': self.__client_id,
             'client_secret': self.__client_secret,
         }
-        request = requests.post(Izettle.oauth_url, data=data)
+        request = requests.post(Izettle.oauth_url, data=data, timeout=Izettle.timeout)
 
         if(request.status_code != 200):
             raise RequestException("Invalid response", request)
