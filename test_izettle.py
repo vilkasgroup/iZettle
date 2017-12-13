@@ -49,21 +49,44 @@ class TestIzettle(unittest.TestCase):
 
     def test_product(self):
         uuid1 = str(uuid.uuid1())
+        name = 'product1'
         self.assertIsNotNone(self.client.create_product({
-            'name': 'product1',
+            'name': name,
             'uuid': uuid1,
         }))
 
-        # after product is sent to iZettle, it's not immediately usable
-        #time.sleep(1)
+        product = self.client.get_product(uuid1)
+        self.assertEqual(product['uuid'], uuid1)
+        self.assertEqual(product['name'], name)
 
-        # TODO, name and uuid with get method
-
+        updated_name = 'updated product name'
         self.assertIsNotNone(self.client.update_product(uuid1, {
-            'name': 'updated product name',
+            'name': updated_name,
         }))
 
-        # TODO, name and uuid with get method
+        updated_product = self.client.get_product(uuid1)
+        self.assertEqual(updated_product['name'], updated_name)
+
+        self.client.delete_product(uuid1)
+
+        # now that the product is deleted, get_product should return empty set
+        deleted_product = self.client.get_product(uuid1)
+        self.assertFalse(deleted_product)
+
+        # TODO, add delete method, so it wont make so many objects...
+
+    def test_expired_session(self):
+        # Normaly the session is valid for 7200 seconds, but I want to
+        # see that it still works if the client thinks that the session
+        # has expired.
+        #
+        # TODO. Try also setting the session valid time to bigger than 7200
+        # seconds, then wait for 7200 seconds to test if it can handle that
+        # too (it should, but it hasn't been tested yet).
+        self.client._Izettle__seconds_the_session_is_valid = 1
+        self.client.auth()
+        time.sleep(2)
+        self.client.get_all_products()
 
 
 if __name__ == '__main__':

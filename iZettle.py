@@ -2,6 +2,7 @@ import requests
 import logging
 import json
 import uuid
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,27 @@ class RequestException(Exception):
 
 
 class Izettle:
+    """ This class handles session and has helper method for most of the
+    api methods provided by iZettle in https://github.com/iZettle/api-documentation.
+    All method take payload data as defined in the API and they all return the JSON from
+    the API as-is in dictionary form.
+
+    example usage:
+    >>> from iZettle import Izettle, RequestException
+    >>> client = Izettle(
+    ...     client_id=os.environ['IZETTLE_CLIENT_ID'],
+    ...     client_secret=os.environ['IZETTLE_CLIENT_SECRET'],
+    ...     user=os.environ['IZETTLE_USER'],
+    ...     password=os.environ['IZETTLE_PASSWORD'],
+    ... )
+    >>> uuid1 = str(uuid.uuid1())
+    >>> client.create_product({'name': 'new product', 'uuid': uuid1})
+    {}
+    >>> # name is mandatory, but uuid is not
+    >>> client.get_product(uuid1)
+    {'uuid': '1cc7fa84-dfb0-11e7-86aa-e4a7a083a65d','name': 'new product' ... }
+    >>> client.delete_product(uuid1)
+    """
     oauth_url = "https://oauth.izettle.net/token"  # note .net vs .com
     base_url = "https://{}.izettle.com/organizations/self/{}"
 
@@ -27,27 +49,49 @@ class Izettle:
         self.__user = user
         self.__password = password
         self.__token = None
+        self.__valid_until = 0
+
+        # The session is valid for 7200 seconds. Tests may want to change it, so
+        # I use it as a variable, but you shouldn't need to touch it in normal use.
+        self.__seconds_the_session_is_valid = 7140
         self.auth()
 
-    def append_header(f):
-        """ Decorator that adds the auth token to the request header """
-        def _append_header(self, *args, **kwargs):
-            # TODO refresh token if invalid. (keep time and check response)
+    def _authenticate_request(f):
+        """ Decorator that adds the auth token to the request header
+        and refreshes the token if needed """
+        def __authenticate_request(self, *args, **kwargs):
+            if(self.__valid_until < time.time()):
+                logger.info("session is no longer valid. re-auhtorize!")
+                self.auth()
+
             headers = {
                 "Authorization": "Bearer {}".format(self.__token),
                 'Content-Type': 'application/json'
             }
             logger.info("request header {}".format(headers))
-            request = f(self, *args, headers=headers, **kwargs)
+            response = f(self, *args, headers=headers, **kwargs)
+
+            # TODO: if the API responses, that the session in no longer valid
+            # refresh the token here, and re-do the request.
+            return response
+        return __authenticate_request
+
+    def _response_handler(f):
+        """ Decorator that handles responses (throw errors etc, decode json etc.) """
+        def __response_handler(self, *args, **kwargs):
+            request = f(self, *args, **kwargs)
             logger.info("response status code {}".format(request.status_code))
-            logger.info("response rext:{}".format(request.text))
+            logger.info("response text:{}".format(request.text))
 
             # TODO, raise RequestException here if needed
             # or make a new decorator...
-            return request
-        return _append_header
+            if(request.status_code == 200):
+                return request.json()
+            return {}
+        return __response_handler
 
-    @append_header
+    @_response_handler
+    @_authenticate_request
     def create_product(self, data={}, headers={}):
         """ create a new product (POST)
         exmpale with mandatory fields:
@@ -73,7 +117,8 @@ class Izettle:
         request = requests.post(url, data=json_data, headers=headers)
         return request
 
-    @append_header
+    @_response_handler
+    @_authenticate_request
     def update_product(self, uuid, data={}, headers={}):
         """ update excisting product (PUT)
         example:
@@ -89,13 +134,26 @@ class Izettle:
         request = requests.put(url, data=json_data, headers=headers)
         return request
 
-    @append_header
-    def get_product(self, data={}, headers={}):
-        pass
+    @_response_handler
+    @_authenticate_request
+    def get_all_products(self, data={}, headers={}):
+        """ get all products. Note: This does not take any parameters """
+        url = Izettle.base_url.format('products', 'products')
+        return requests.get(url, headers=headers)
 
-    @append_header
+    @_response_handler
+    @_authenticate_request
+    def get_product(self, uuid, data={}, headers={}):
+        logger.info('\nUUID:')
+        logger.info(uuid)
+        url = Izettle.base_url.format('products', 'products/' + uuid)
+        return requests.get(url, headers=headers)
+
+    @_response_handler
+    @_authenticate_request
     def delete_product(self, uuid, data={}, headers={}):
-        pass
+        url = Izettle.base_url.format('products', 'products/' + uuid)
+        return requests.delete(url, headers=headers)
 
     def auth(self):
         """ Authenticate the session. Session is valid for 7200 seconds """
@@ -115,23 +173,4 @@ class Izettle:
         self.__token = response['access_token']
         if(not self.__token):
             raise RequestException("Token missing", request)
-
-
-if __name__ == '__main__':
-    import os
-    import sys
-    logger.level = logging.DEBUG
-    stream_handler = logging.StreamHandler(sys.stdout)
-    logger.addHandler(stream_handler)
-
-    client = Izettle(
-        client_id=os.environ['IZETTLE_CLIENT_ID'],
-        client_secret=os.environ['IZETTLE_CLIENT_SECRET'],
-        user=os.environ['IZETTLE_USER'],
-        password=os.environ['IZETTLE_PASSWORD'],
-    )
-    logger.info('\npost product...\n')
-    client.create_product({'name': 'name', 'vatPercentage': 0})
-    # client.update_product(data={'uuid': '65d5a3aa-df85-11e7-a0c5-e4a7a083a65d'})  # our own uuid
-    # client.update_product(data={'uuid': '9168a25d-5c0e-440d-aa56-a74148bd36cc'})  # uuid from api
-    # client.update_product({'name': 'asdf'})
+        self.__valid_until = time.time() + self.__seconds_the_session_is_valid
