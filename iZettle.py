@@ -35,7 +35,7 @@ class Izettle:
     >>> client.create_product({'name': 'new product'})
     """
     oauth_url = "https://oauth.izettle.net/token"
-    base_url = "https://{}.izettle.com/organizations/self/{}"
+    product_url = "https://products.izettle.com/organizations/self/{}"
     timeout = 30
 
     def __init__(self, client_id="", client_secret="", user="", password=""):
@@ -106,7 +106,7 @@ class Izettle:
         if 'vatPercentage' not in data:
             data['vatPercentage'] = '0'
 
-        url = Izettle.base_url.format('products', 'products')
+        url = Izettle.product_url.format('products')
         json_data = json.dumps(data)
         return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
 
@@ -116,36 +116,36 @@ class Izettle:
         """ update excisting product (PUT) """
         headers['If-Match'] = '*'
 
-        url = Izettle.base_url.format('products', 'products/v2/' + uuid)
+        url = Izettle.product_url.format('products/v2/' + uuid)
         json_data = json.dumps(data)
         return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
-    def get_all_products(self, data={}, headers={}):
+    def get_all_products(self, headers={}):
         """ get all products. Note: This does not take any parameters """
-        url = Izettle.base_url.format('products', 'products')
+        url = Izettle.product_url.format('products')
         return requests.get(url, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
-    def get_product(self, uuid, data={}, headers={}):
+    def get_product(self, uuid, headers={}):
         """ get single product with uuid """
-        url = Izettle.base_url.format('products', 'products/' + uuid)
+        url = Izettle.product_url.format('products/' + uuid)
         return requests.get(url, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
-    def delete_product(self, uuid, data={}, headers={}):
+    def delete_product(self, uuid, headers={}):
         """ delete a single product """
-        url = Izettle.base_url.format('products', 'products/' + uuid)
+        url = Izettle.product_url.format('products/' + uuid)
         return requests.delete(url, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
     def delete_product_list(self, data={}, headers={}):
         """ delete multiple products """
-        url = Izettle.base_url.format('products', 'products')
+        url = Izettle.product_url.format('products')
         return requests.delete(url, params=data, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
@@ -155,7 +155,7 @@ class Izettle:
         if 'uuid' not in data:
             data['uuid'] = str(uuid.uuid1())
 
-        url = Izettle.base_url.format('products', 'products/{}/variants')
+        url = Izettle.product_url.format('products/{}/variants')
         url = url.format(product_uuid)
 
         json_data = json.dumps(data)
@@ -167,7 +167,7 @@ class Izettle:
         """ update product variant """
         headers['If-Match'] = '*'
 
-        url = Izettle.base_url.format('products', 'products/{}/variants/{}')
+        url = Izettle.product_url.format('products/{}/variants/{}')
         url = url.format(product_uuid, variant_uuid)
         json_data = json.dumps(data)
         return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
@@ -176,7 +176,7 @@ class Izettle:
     @_authenticate_request
     def delete_product_variant(self, product_uuid, variant_uuid, headers={}):
         """ delete a variant of a product """
-        url = Izettle.base_url.format('products', 'products/{}/variants/{}')
+        url = Izettle.product_url.format('products/{}/variants/{}')
         url = url.format(product_uuid, variant_uuid)
 
         return requests.delete(url, headers=headers, timeout=Izettle.timeout)
@@ -185,14 +185,14 @@ class Izettle:
     @_authenticate_request
     def get_all_categroies(self, headers={}):
         """ get all categories."""
-        url = Izettle.base_url.format('products', 'categories')
+        url = Izettle.product_url.format('categories')
         return requests.get(url, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
     def get_category(self, uuid, headers={}):
         """ get single category with uuid """
-        url = Izettle.base_url.format('products', 'categories/' + uuid)
+        url = Izettle.product_url.format('categories/' + uuid)
         return requests.get(url, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
@@ -202,7 +202,7 @@ class Izettle:
         if 'uuid' not in data:
             data['uuid'] = str(uuid.uuid1())
 
-        url = Izettle.base_url.format('products', 'categories')
+        url = Izettle.product_url.format('categories')
         json_data = json.dumps(data)
         return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
 
