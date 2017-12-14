@@ -58,20 +58,17 @@ class Izettle:
                 logger.info("session expired. re-auhtorize!")
                 self.auth()
 
-            headers = {
-                "Authorization": "Bearer {}".format(self.__token),
-                'Content-Type': 'application/json'
-            }
             logger.info('call function {}'.format(f.__name__))
             logger.info("args {}".format(args))
             logger.info("kwargs {}".format(kwargs))
-            response = f(self, *args, headers=headers, **kwargs)
+            response = f(self, *args, **kwargs)
 
             if(response.status_code == 401):
+                logger.info(response.text)
                 if(response.json()['errorType'] == 'ACCESS_TOKEN_EXPIRED'):
                     logger.info('session expired. re-authorize and try again!')
                     self.auth()
-                    response = f(self, *args, headers=headers, **kwargs)
+                    response = f(self, *args, **kwargs)
 
             return response
         return __authenticate_request
@@ -97,7 +94,7 @@ class Izettle:
         @wraps(f)
         def __delete(self, *args, **kwargs):
             url = f(self, *args, **kwargs)
-            return requests.delete(url, timeout=Izettle.timeout, **kwargs)
+            return requests.delete(url, timeout=Izettle.timeout, headers=self.__headers, **kwargs)
         return __delete
 
     def _get(f):
@@ -106,12 +103,12 @@ class Izettle:
         @wraps(f)
         def __get(self, *args, **kwargs):
             url = f(self, *args, **kwargs)
-            return requests.get(url, timeout=Izettle.timeout, **kwargs)
+            return requests.get(url, timeout=Izettle.timeout, headers=self.__headers, **kwargs)
         return __get
 
     @_response_handler
     @_authenticate_request
-    def create_product(self, data={}, headers={}):
+    def create_product(self, data={}):
         """ create a new product (POST) """
         if 'uuid' not in data:
             data['uuid'] = str(uuid.uuid1())
@@ -128,51 +125,47 @@ class Izettle:
 
         url = Izettle.product_url.format('products')
         json_data = json.dumps(data)
-        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+        return requests.post(url, data=json_data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
-    def update_product(self, uuid, data={}, headers={}):
+    def update_product(self, uuid, data={}):
         """ update excisting product (PUT) """
-
-        # TODO, use etags
-        headers['If-Match'] = '*'
-
         url = Izettle.product_url.format('products/v2/' + uuid)
         json_data = json.dumps(data)
-        return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+        return requests.put(url, data=json_data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
     @_get
-    def get_all_products(self, headers={}):
+    def get_all_products(self):
         """ get all products. """
         return Izettle.product_url.format('products')
 
     @_response_handler
     @_authenticate_request
     @_get
-    def get_product(self, uuid, headers={}):
+    def get_product(self, uuid):
         """ get single product with uuid """
         return Izettle.product_url.format('products/' + uuid)
 
     @_response_handler
     @_authenticate_request
     @_delete
-    def delete_product(self, uuid, headers={}):
+    def delete_product(self, uuid):
         """ delete a single product """
         return Izettle.product_url.format('products/' + uuid)
 
     @_response_handler
     @_authenticate_request
-    def delete_product_list(self, data={}, headers={}):
+    def delete_product_list(self, data={}):
         """ delete multiple products """
         url = Izettle.product_url.format('products')
-        return requests.delete(url, params=data, headers=headers, timeout=Izettle.timeout)
+        return requests.delete(url, params=data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
-    def create_product_variant(self, product_uuid, data={}, headers={}):
+    def create_product_variant(self, product_uuid, data={}):
         """ Create a product variant for a product """
         if 'uuid' not in data:
             data['uuid'] = str(uuid.uuid1())
@@ -181,25 +174,22 @@ class Izettle:
         url = url.format(product_uuid)
 
         json_data = json.dumps(data)
-        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+        return requests.post(url, data=json_data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
-    def update_product_variant(self, product_uuid, variant_uuid, data={}, headers={}):
+    def update_product_variant(self, product_uuid, variant_uuid, data={}):
         """ update product variant """
-
-        # TODO: use etags
-        headers['If-Match'] = '*'
 
         url = Izettle.product_url.format('products/{}/variants/{}')
         url = url.format(product_uuid, variant_uuid)
         json_data = json.dumps(data)
-        return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+        return requests.put(url, data=json_data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
     @_delete
-    def delete_product_variant(self, product_uuid, variant_uuid, headers={}):
+    def delete_product_variant(self, product_uuid, variant_uuid):
         """ delete a variant of a product """
         url = Izettle.product_url.format('products/{}/variants/{}')
         return url.format(product_uuid, variant_uuid)
@@ -207,71 +197,68 @@ class Izettle:
     @_response_handler
     @_authenticate_request
     @_get
-    def get_all_categroies(self, headers={}):
+    def get_all_categroies(self):
         """ get all categories. """
         return Izettle.product_url.format('categories')
 
     @_response_handler
     @_authenticate_request
     @_get
-    def get_category(self, uuid, headers={}):
+    def get_category(self, uuid):
         """ get single category with uuid """
         return Izettle.product_url.format('categories/' + uuid)
 
     @_response_handler
     @_authenticate_request
-    def create_category(self, data={}, headers={}):
+    def create_category(self, data={}):
         """ create a new category """
         if 'uuid' not in data:
             data['uuid'] = str(uuid.uuid1())
 
         url = Izettle.product_url.format('categories')
         json_data = json.dumps(data)
-        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+        return requests.post(url, data=json_data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
-    def create_discount(self, data={}, headers={}):
+    def create_discount(self, data={}):
         """ create a new discount """
         if 'uuid' not in data:
             data['uuid'] = str(uuid.uuid1())
 
         url = Izettle.product_url.format('discounts')
         json_data = json.dumps(data)
-        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+        return requests.post(url, data=json_data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
     @_get
-    def get_all_discounts(self, headers={}):
+    def get_all_discounts(self):
         """ get all discounts. """
         return Izettle.product_url.format('discounts')
 
     @_response_handler
     @_authenticate_request
     @_get
-    def get_discount(self, uuid, headers={}):
+    def get_discount(self, uuid):
         """ get single discount with uuid """
         return Izettle.product_url.format('discounts/' + uuid)
 
     @_response_handler
     @_authenticate_request
     @_delete
-    def delete_discount(self, uuid, headers={}):
+    def delete_discount(self, uuid):
         """ delete a single discount """
         return Izettle.product_url.format('discounts/' + uuid)
 
     @_response_handler
     @_authenticate_request
-    def update_discount(self, uuid, data={}, headers={}):
+    def update_discount(self, uuid, data={}):
         """ update excisting discount """
-
-        # TODO, use etags
-        headers['If-Match'] = '*'
 
         url = Izettle.product_url.format('discounts/' + uuid)
         json_data = json.dumps(data)
-        return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+        return requests.put(url, data=json_data, headers=self.__headers, timeout=Izettle.timeout)
 
     @_response_handler
     def auth(self):
@@ -300,4 +287,14 @@ class Izettle:
         self.__token = response['access_token']
         self.__refresh_token = response['refresh_token']
         self.__session_valid_until = time.time() + response['expires_in'] - 60
+        self.__headers = {
+            "Authorization": "Bearer {}".format(self.__token),
+            'Content-Type': 'application/json',
+            'IF-Match': '*'  # TODO, use etag where needed
+        }
+
+        # TODO:
+        # since every one is calling request methods with the same
+        # "headers=self.__headers, timeout=Izettle.timeout", maybe
+        # we should have some short hand for that...
         return request
