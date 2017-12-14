@@ -46,6 +46,27 @@ class TestIzettle(unittest.TestCase):
         self.assertEqual(exception.msg, "Invalid response")
         self.assertEqual(exception.request.status_code, 400)
 
+    def test_categories(self):
+        c = self.client
+
+        category_uuid = str(uuid.uuid1())
+        category_name = 'category name'
+
+        c.create_category({
+            'uuid': category_uuid,
+            'name': category_name
+        })
+
+        self.assertGreater(len(c.get_all_categroies()), 0)
+        category = c.get_category(category_uuid)
+        self.assertEqual(category['uuid'], category_uuid)
+
+        # FUN FUN FUN. All categories have name converted to upper case...
+        self.assertEqual(category['name'], category_name.upper())
+
+        # Tough luck, categories do not have delete method.
+        # Your account is now full of unwanted categories...
+
     def test_product(self):
         c = self.client
 

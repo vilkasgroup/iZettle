@@ -175,10 +175,36 @@ class Izettle:
     @_response_handler
     @_authenticate_request
     def delete_product_variant(self, product_uuid, variant_uuid, headers={}):
+        """ delete a variant of a product """
         url = Izettle.base_url.format('products', 'products/{}/variants/{}')
         url = url.format(product_uuid, variant_uuid)
 
         return requests.delete(url, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    def get_all_categroies(self, headers={}):
+        """ get all categories."""
+        url = Izettle.base_url.format('products', 'categories')
+        return requests.get(url, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    def get_category(self, uuid, headers={}):
+        """ get single category with uuid """
+        url = Izettle.base_url.format('products', 'categories/' + uuid)
+        return requests.get(url, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    def create_category(self, data={}, headers={}):
+        """ create a new category """
+        if 'uuid' not in data:
+            data['uuid'] = str(uuid.uuid1())
+
+        url = Izettle.base_url.format('products', 'categories')
+        json_data = json.dumps(data)
+        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     def auth(self):
