@@ -63,6 +63,8 @@ class Izettle:
                 'Content-Type': 'application/json'
             }
             logger.info('call function {}'.format(f.__name__))
+            logger.info("args {}".format(args))
+            logger.info("kwargs {}".format(kwargs))
             response = f(self, *args, headers=headers, **kwargs)
 
             if(response.status_code == 401):
@@ -79,8 +81,8 @@ class Izettle:
         @wraps(f)
         def __response_handler(self, *args, **kwargs):
             request = f(self, *args, **kwargs)
-            logger.info("response status code {}".format(request.status_code))
-            logger.info("response text:{}".format(request.text))
+            logger.info("response status code: {}".format(request.status_code))
+            logger.info("response text: {}".format(request.text))
 
             if(request.ok):
                 if(request.text):
@@ -88,6 +90,24 @@ class Izettle:
                 return {}
             raise RequestException('error {}'.format(request.status_code), request)
         return __response_handler
+
+    def _delete(f):
+        """ decorator that does request.delete request. Just return url in your method.
+        Does not work if you need to include data to the request """
+        @wraps(f)
+        def __delete(self, *args, **kwargs):
+            url = f(self, *args, **kwargs)
+            return requests.delete(url, timeout=Izettle.timeout, **kwargs)
+        return __delete
+
+    def _get(f):
+        """ decorator that does request.get request. Just return url in your method
+        Does not work if you need to include data to the request """
+        @wraps(f)
+        def __get(self, *args, **kwargs):
+            url = f(self, *args, **kwargs)
+            return requests.get(url, timeout=Izettle.timeout, **kwargs)
+        return __get
 
     @_response_handler
     @_authenticate_request
@@ -114,6 +134,8 @@ class Izettle:
     @_authenticate_request
     def update_product(self, uuid, data={}, headers={}):
         """ update excisting product (PUT) """
+
+        # TODO, use etags
         headers['If-Match'] = '*'
 
         url = Izettle.product_url.format('products/v2/' + uuid)
@@ -122,24 +144,24 @@ class Izettle:
 
     @_response_handler
     @_authenticate_request
+    @_get
     def get_all_products(self, headers={}):
-        """ get all products. Note: This does not take any parameters """
-        url = Izettle.product_url.format('products')
-        return requests.get(url, headers=headers, timeout=Izettle.timeout)
+        """ get all products. """
+        return Izettle.product_url.format('products')
 
     @_response_handler
     @_authenticate_request
+    @_get
     def get_product(self, uuid, headers={}):
         """ get single product with uuid """
-        url = Izettle.product_url.format('products/' + uuid)
-        return requests.get(url, headers=headers, timeout=Izettle.timeout)
+        return Izettle.product_url.format('products/' + uuid)
 
     @_response_handler
     @_authenticate_request
+    @_delete
     def delete_product(self, uuid, headers={}):
         """ delete a single product """
-        url = Izettle.product_url.format('products/' + uuid)
-        return requests.delete(url, headers=headers, timeout=Izettle.timeout)
+        return Izettle.product_url.format('products/' + uuid)
 
     @_response_handler
     @_authenticate_request
@@ -165,6 +187,8 @@ class Izettle:
     @_authenticate_request
     def update_product_variant(self, product_uuid, variant_uuid, data={}, headers={}):
         """ update product variant """
+
+        # TODO: use etags
         headers['If-Match'] = '*'
 
         url = Izettle.product_url.format('products/{}/variants/{}')
@@ -174,26 +198,25 @@ class Izettle:
 
     @_response_handler
     @_authenticate_request
+    @_delete
     def delete_product_variant(self, product_uuid, variant_uuid, headers={}):
         """ delete a variant of a product """
         url = Izettle.product_url.format('products/{}/variants/{}')
-        url = url.format(product_uuid, variant_uuid)
-
-        return requests.delete(url, headers=headers, timeout=Izettle.timeout)
+        return url.format(product_uuid, variant_uuid)
 
     @_response_handler
     @_authenticate_request
+    @_get
     def get_all_categroies(self, headers={}):
-        """ get all categories."""
-        url = Izettle.product_url.format('categories')
-        return requests.get(url, headers=headers, timeout=Izettle.timeout)
+        """ get all categories. """
+        return Izettle.product_url.format('categories')
 
     @_response_handler
     @_authenticate_request
+    @_get
     def get_category(self, uuid, headers={}):
         """ get single category with uuid """
-        url = Izettle.product_url.format('categories/' + uuid)
-        return requests.get(url, headers=headers, timeout=Izettle.timeout)
+        return Izettle.product_url.format('categories/' + uuid)
 
     @_response_handler
     @_authenticate_request
@@ -205,6 +228,50 @@ class Izettle:
         url = Izettle.product_url.format('categories')
         json_data = json.dumps(data)
         return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    def create_discount(self, data={}, headers={}):
+        """ create a new discount """
+        if 'uuid' not in data:
+            data['uuid'] = str(uuid.uuid1())
+
+        url = Izettle.product_url.format('discounts')
+        json_data = json.dumps(data)
+        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    @_get
+    def get_all_discounts(self, headers={}):
+        """ get all discounts. """
+        return Izettle.product_url.format('discounts')
+
+    @_response_handler
+    @_authenticate_request
+    @_get
+    def get_discount(self, uuid, headers={}):
+        """ get single discount with uuid """
+        return Izettle.product_url.format('discounts/' + uuid)
+
+    @_response_handler
+    @_authenticate_request
+    @_delete
+    def delete_discount(self, uuid, headers={}):
+        """ delete a single discount """
+        return Izettle.product_url.format('discounts/' + uuid)
+
+    @_response_handler
+    @_authenticate_request
+    def update_discount(self, uuid, data={}, headers={}):
+        """ update excisting discount """
+
+        # TODO, use etags
+        headers['If-Match'] = '*'
+
+        url = Izettle.product_url.format('discounts/' + uuid)
+        json_data = json.dumps(data)
+        return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     def auth(self):

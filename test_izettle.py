@@ -46,6 +46,32 @@ class TestIzettle(unittest.TestCase):
         self.assertEqual(exception.msg, "Invalid response")
         self.assertEqual(exception.request.status_code, 400)
 
+    def test_discounts(self):
+        c = self.client
+        discount_uuid = str(uuid.uuid1())
+        discount_percentage = '10'
+
+        c.create_discount({
+            'uuid': discount_uuid,
+            'percentage': discount_percentage,
+        })
+
+        self.assertGreater(len(c.get_all_discounts()), 0)
+
+        discount = c.get_discount(discount_uuid)
+        self.assertEqual(discount['uuid'], discount_uuid)
+        self.assertEqual(discount['percentage'], discount_percentage)
+
+        new_name = 'new name'
+        c.update_discount(discount_uuid, {'name': new_name})
+        self.assertEqual(c.get_discount(discount_uuid)['name'], new_name)
+
+        c.delete_discount(discount_uuid)
+        with self.assertRaises(RequestException) as re:
+            c.get_discount(discount_uuid)
+        exception = re.exception
+        self.assertEqual(exception.request.status_code, 404)
+
     def test_categories(self):
         c = self.client
 
