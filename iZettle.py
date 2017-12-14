@@ -82,11 +82,11 @@ class Izettle:
             logger.info("response status code {}".format(request.status_code))
             logger.info("response text:{}".format(request.text))
 
-            # TODO, raise RequestException here if needed
-            # or make a new decorator...
-            if(request.status_code == 200):
-                return request.json()
-            return {}
+            if(request.ok):
+                if(request.text):
+                    return request.json()
+                return {}
+            raise RequestException('error {}'.format(request.status_code), request)
         return __response_handler
 
     @_response_handler
@@ -108,8 +108,7 @@ class Izettle:
 
         url = Izettle.base_url.format('products', 'products')
         json_data = json.dumps(data)
-        request = requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
-        return request
+        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
@@ -119,8 +118,7 @@ class Izettle:
 
         url = Izettle.base_url.format('products', 'products/v2/' + uuid)
         json_data = json.dumps(data)
-        request = requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
-        return request
+        return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
 
     @_response_handler
     @_authenticate_request
@@ -150,6 +148,39 @@ class Izettle:
         url = Izettle.base_url.format('products', 'products')
         return requests.delete(url, params=data, headers=headers, timeout=Izettle.timeout)
 
+    @_response_handler
+    @_authenticate_request
+    def create_product_variant(self, product_uuid, data={}, headers={}):
+        """ Create a product variant for a product """
+        if 'uuid' not in data:
+            data['uuid'] = str(uuid.uuid1())
+
+        url = Izettle.base_url.format('products', 'products/{}/variants')
+        url = url.format(product_uuid)
+
+        json_data = json.dumps(data)
+        return requests.post(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    def update_product_variant(self, product_uuid, variant_uuid, data={}, headers={}):
+        """ update product variant """
+        headers['If-Match'] = '*'
+
+        url = Izettle.base_url.format('products', 'products/{}/variants/{}')
+        url = url.format(product_uuid, variant_uuid)
+        json_data = json.dumps(data)
+        return requests.put(url, data=json_data, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
+    @_authenticate_request
+    def delete_product_variant(self, product_uuid, variant_uuid, headers={}):
+        url = Izettle.base_url.format('products', 'products/{}/variants/{}')
+        url = url.format(product_uuid, variant_uuid)
+
+        return requests.delete(url, headers=headers, timeout=Izettle.timeout)
+
+    @_response_handler
     def auth(self):
         """ Authenticate the session. Session is valid for 7200 seconds """
         if(self.__refresh_token):
@@ -176,3 +207,4 @@ class Izettle:
         self.__token = response['access_token']
         self.__refresh_token = response['refresh_token']
         self.__session_valid_until = time.time() + response['expires_in'] - 60
+        return request

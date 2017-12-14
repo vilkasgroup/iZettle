@@ -3,7 +3,6 @@ import sys
 import unittest
 import logging
 import uuid
-import time
 from iZettle import Izettle, RequestException
 
 logger = logging.getLogger()
@@ -48,39 +47,64 @@ class TestIzettle(unittest.TestCase):
         self.assertEqual(exception.request.status_code, 400)
 
     def test_product(self):
+        c = self.client
+
         uuid1 = str(uuid.uuid1())
         name = 'product1'
-        self.assertIsNotNone(self.client.create_product({
+
+        c.create_product({
             'name': name,
             'uuid': uuid1,
-        }))
+        })
 
-        product = self.client.get_product(uuid1)
+        product = c.get_product(uuid1)
         self.assertEqual(product['uuid'], uuid1)
         self.assertEqual(product['name'], name)
 
         updated_name = 'updated product name'
-        self.assertIsNotNone(self.client.update_product(uuid1, {
+        c.update_product(uuid1, {
             'name': updated_name,
-        }))
+        })
 
-        updated_product = self.client.get_product(uuid1)
+        updated_product = c.get_product(uuid1)
         self.assertEqual(updated_product['name'], updated_name)
 
-        self.client.delete_product(uuid1)
+        variant_uuid = str(uuid.uuid1())
+        variant_name = 'variant name 1'
+        c.create_product_variant(uuid1, {'uuid': variant_uuid})
+        c.update_product_variant(uuid1, variant_uuid, {'name': variant_name})
 
-        # now that the product is deleted, get_product should return empty set
-        deleted_product = self.client.get_product(uuid1)
-        self.assertFalse(deleted_product)
+        product_with_updated_variant = c.get_product(uuid1)
+        found_the_new_variant = False
+        for variant in product_with_updated_variant['variants']:
+            if(variant['uuid'] != variant_uuid):
+                continue
+            self.assertEqual(variant['name'], variant_name)
+            found_the_new_variant = True
+        self.assertTrue(found_the_new_variant)
+
+        c.delete_product_variant(uuid1, variant_uuid)
+        variant_is_no_longer_in_product = True
+        for variant in c.get_product(uuid1)['variants']:
+            if(variant['uuid'] == variant_uuid):
+                variant_is_no_longer_in_product = False
+        self.assertTrue(variant_is_no_longer_in_product)
+
+        c.delete_product(uuid1)
+        with self.assertRaises(RequestException) as re:
+            c.get_product(uuid1)
+        exception = re.exception
+        self.assertEqual(exception.msg, "error 404")
+        self.assertEqual(exception.request.status_code, 404)
 
         uuid2 = str(uuid.uuid1())
         self.assertNotEqual(uuid1, uuid2)
-        current_product_amount = len(self.client.get_all_products())
-        self.client.create_product({'name': '1', 'uuid': uuid1})
-        self.client.create_product({'name': '2', 'uuid': uuid2})
-        self.assertEqual(len(self.client.get_all_products()), current_product_amount + 2)
-        self.client.delete_product_list({'uuid': [uuid1, uuid2]})
-        self.assertEqual(len(self.client.get_all_products()), current_product_amount)
+        current_product_amount = len(c.get_all_products())
+        c.create_product({'name': '1', 'uuid': uuid1})
+        c.create_product({'name': '2', 'uuid': uuid2})
+        self.assertEqual(len(c.get_all_products()), current_product_amount + 2)
+        c.delete_product_list({'uuid': [uuid1, uuid2]})
+        self.assertEqual(len(c.get_all_products()), current_product_amount)
 
 
 if __name__ == '__main__':
