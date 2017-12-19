@@ -3,6 +3,7 @@ import sys
 import unittest
 import logging
 import uuid
+import time
 from iZettle import Izettle, RequestException
 
 logger = logging.getLogger()
@@ -153,6 +154,15 @@ class TestIzettle(unittest.TestCase):
         c.delete_product_list({'uuid': [uuid1, uuid2]})
         self.assertEqual(len(c.get_all_products()), current_product_amount)
 
+    @unittest.skip('This will take over 2 hours.')
+    def test_session(self):
+        """ This tests if the integration works if the session expires before we
+        anticipate. This simply waits for the for the sessino to expire, so it wil
+        take a looooooong time """
+        self.client.__session_valid_until = time.time() + 9000
+        time.sleep(8000)
+        self.assertIsNotNone(self.client.get_all_products())
+
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)
