@@ -16,6 +16,13 @@ class RequestException(Exception):
         super(RequestException, self).__init__(*args, **kwargs)
         self.msg = msg
         self.request = request
+        try:
+            # This is most of the times the only error message that you'll get/need
+            self.developer_message = request.json()['developerMessage']
+        except(ValueError):
+            # Could be, that the error wasn't returned by the iZettle server app, but rather
+            # by the server, load balancer etc.
+            logger.info('request error did not have json.')
 
 
 class Izettle:
@@ -37,6 +44,8 @@ class Izettle:
     """
     oauth_url = "https://oauth.izettle.net/token"
     product_url = "https://products.izettle.com/organizations/self/{}"
+    purchase_url = "https://purchase.izettle.com/{}"
+    image_url = "https://image.izettle.com/v2/images/organizations/self/products"
     timeout = 30
 
     def __init__(self, client_id="", client_secret="", user="", password=""):
@@ -59,9 +68,6 @@ class Izettle:
                 logger.info("session expired. re-auhtorize!")
                 self.auth()
 
-            logger.info('asdf')
-            print('asdf')
-            # logger.info('call function {}'.format(f.__name__))
             logger.info("args {}".format(args))
             logger.info("kwargs {}".format(kwargs))
             response = f(self, *args, **kwargs)
@@ -213,7 +219,6 @@ class Izettle:
     @combined_decorator
     def update_product_variant(self, product_uuid, variant_uuid, data=None):
         """ update product variant """
-
         url = Izettle.product_url.format('products/{}/variants/{}')
         url = url.format(product_uuid, variant_uuid)
         return url, data
@@ -270,9 +275,22 @@ class Izettle:
     @combined_decorator
     def update_discount(self, uuid, data=None):
         """ update excisting discount """
-
         url = Izettle.product_url.format('discounts/' + uuid)
         return url, data
+
+    @_response_handler
+    @_authenticate_request
+    def get_all_purchases(self, data=None):
+        url = Izettle.purchase_url.format('purchases/v2')
+        return requests.get(url, params=data, headers=self.__headers, timeout=Izettle.timeout)
+
+    @combined_decorator
+    def get_purchase(self, uuid):
+        return Izettle.purchase_url.format('purchase/v2/' + uuid)
+
+    @combined_decorator
+    def create_image(self, data):
+        return Izettle.image_url, data
 
     @_response_handler
     def auth(self):

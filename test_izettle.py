@@ -99,6 +99,11 @@ class TestIzettle(unittest.TestCase):
 
         uuid1 = str(uuid.uuid1())
         name = 'product1'
+        c.get_product(uuid1)
+        with self.assertRaises(RequestException) as e:
+            c.get_product(uuid1)
+        self.assertEqual(e.exception.request.status_code, 404)
+        self.assertIn('not found', e.exception.developer_message)
 
         c.create_product({
             'name': name,
@@ -153,6 +158,34 @@ class TestIzettle(unittest.TestCase):
         self.assertEqual(len(c.get_all_products()), current_product_amount + 2)
         c.delete_product_list({'uuid': [uuid1, uuid2]})
         self.assertEqual(len(c.get_all_products()), current_product_amount)
+
+    def test_purchases(self):
+        c = self.client
+
+        with self.assertRaises(TypeError):
+            # Parameters need to be in data dict
+            c.get_all_purchases(limit=1)
+
+        with self.assertRaises(TypeError):
+            # missing mandatory argument
+            c.get_purchase()
+
+        with self.assertRaises(RequestException) as e:
+            # This order of course cannot be in the server, because we made up the uuid
+            c.get_purchase(str(uuid.uuid1()))
+        self.assertEqual(e.exception.request.status_code, 404)
+        self.assertIn('not found', e.exception.developer_message)
+
+        all_purchases = c.get_all_purchases({'limit': 1})
+        self.assertEqual(len(all_purchases['purchases']), 1)
+
+        purchase_uuid = all_purchases['purchases'][0]['purchaseUUID']
+        single_purchase = c.get_purchase(purchase_uuid)
+        self.assertEqual(purchase_uuid, single_purchase['purchaseUUID'])
+
+        purchase_uuid1 = all_purchases['purchases'][0]['purchaseUUID1']
+        single_purchase = c.get_purchase(purchase_uuid1)
+        self.assertEqual(purchase_uuid, single_purchase['purchaseUUID'])
 
     @unittest.skip('This will take over 2 hours.')
     def test_session(self):
