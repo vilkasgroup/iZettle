@@ -147,7 +147,7 @@ class TestIzettle(unittest.TestCase):
         with self.assertRaises(RequestException) as re:
             c.get_product(uuid1)
         exception = re.exception
-        self.assertEqual(exception.msg, "error 404")
+        self.assertEqual(exception.msg, "request error 404")
         self.assertEqual(exception.request.status_code, 404)
 
         uuid2 = str(uuid.uuid1())
@@ -164,7 +164,7 @@ class TestIzettle(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             # Parameters need to be in data dict
-            c.get_all_purchases(limit=1)
+            c.get_multiple_purchases(limit=1)
 
         with self.assertRaises(TypeError):
             # missing mandatory argument
@@ -176,14 +176,14 @@ class TestIzettle(unittest.TestCase):
         self.assertEqual(e.exception.request.status_code, 404)
         self.assertIn('not found', e.exception.developer_message)
 
-        all_purchases = c.get_all_purchases({'limit': 1})
-        self.assertEqual(len(all_purchases['purchases']), 1)
+        multiple_purchases = c.get_multiple_purchases({'limit': 1})
+        self.assertEqual(len(multiple_purchases['purchases']), 1)
 
-        purchase_uuid = all_purchases['purchases'][0]['purchaseUUID']
+        purchase_uuid = multiple_purchases['purchases'][0]['purchaseUUID']
         single_purchase = c.get_purchase(purchase_uuid)
         self.assertEqual(purchase_uuid, single_purchase['purchaseUUID'])
 
-        purchase_uuid1 = all_purchases['purchases'][0]['purchaseUUID1']
+        purchase_uuid1 = multiple_purchases['purchases'][0]['purchaseUUID1']
         single_purchase = c.get_purchase(purchase_uuid1)
         self.assertEqual(purchase_uuid, single_purchase['purchaseUUID'])
 
