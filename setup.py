@@ -7,7 +7,7 @@ requirements = [
 setup(
     name='iZettle',
     packages=find_packages(include=['iZettle']),
-    version='0.1',
+    version='0.1.0',
     description='',
     author='Aleksi Wikman',
     author_email='aleksi@vilkas.fi',
