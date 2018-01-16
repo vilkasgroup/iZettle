@@ -44,7 +44,8 @@ class TestIzettle(unittest.TestCase):
         with self.assertRaises(RequestException) as re:
             Izettle(client_id='invalid')
         exception = re.exception
-        self.assertEqual(exception.msg, "Invalid response")
+        self.assertEqual(exception.developer_message, "Invalid client_id")
+        self.assertEqual(exception.request.json()['error'], "invalid_client")
         self.assertEqual(exception.request.status_code, 400)
 
     def test_discounts(self):
@@ -99,7 +100,7 @@ class TestIzettle(unittest.TestCase):
 
         uuid1 = str(uuid.uuid1())
         name = 'product1'
-        c.get_product(uuid1)
+
         with self.assertRaises(RequestException) as e:
             c.get_product(uuid1)
         self.assertEqual(e.exception.request.status_code, 404)

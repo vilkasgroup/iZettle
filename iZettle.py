@@ -24,9 +24,14 @@ class RequestException(Exception):
         """ Really short error message, like 'error 404' """
         self.request = request
         """ requests object after get/post/put/delete call. """
-
         try:
-            self.developer_message = request.json()['developerMessage']
+            json_data = request.json()
+            if('developerMessage' in json_data):
+                self.developer_message = json_data['developerMessage']
+            elif('error_description' in json_data):
+                self.developer_message = json_data['error_description']
+            elif('error' in json_data):
+                self.developer_message = json_data['error']
         except(ValueError):
             # JSON wasn't defined or it vas invalid...
             # Could be, that the error wasn't returned by the iZettle server app, but rather

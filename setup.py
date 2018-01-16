@@ -12,7 +12,6 @@ setup(
     author='Aleksi Wikman',
     author_email='aleksi@vilkas.fi',
     url='https://github.com/vilkasgroup/iZettle',
-    download_url='https://github.com/vilkasgroup/iZettle/archive/0.1.tar.gz',
     license="MIT license",
     keywords=['izettle', 'POS', 'Payment'],
     classifiers=[
