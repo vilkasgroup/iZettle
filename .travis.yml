@@ -1,8 +1,13 @@
 language: python
 python:
-  - 3.6
-  - 2.7
-
+- 3.6
+- 2.7
 install: pip install -U tox-travis
-
 script: tox
+deploy:
+  provider: pypi
+  user: "vilkas"
+  password:
+    secure: KYlLeSwpQ3YTNsch6UqA4uyqoSZ8WDofEiWUjthX9f3pOWxXcLiu/cnFgeNHpNU0MDeYy3Y++ncJhpDnW8SgFJncA55un49DuPC6BUhSeSZ+ML0/KcjMqhZhCD8uyq+5PD5xFt0Fhb5dIUkbbfm7QtPE7IdxfRu1r6uksoAbUnsLn7c7y+1zg/MK0jnm8roZR2L57ewCbNqebLjW3WH8mF3+Hpvn0I3iuGZrZAQkXTG1fo8vzjSlYmIxCbSr+Two1JgC2f7B7jz1/4qD6sQBvpHUuzG7q/vWWYo4fHYJv8gAB9CibDqzwEyxQwj87yne6cleT8aOoUqAz/xFj612xYbeqK2VQSv/44KIffZ9bWDclmdkPKYuMY9kWJp2EtXY1v7ARKXfJQWvxJ45qV+f1DNfqtan/ASmn5+QSVKiUyVBgjFjRiBszxGylv1/ymw7UiW87Mc/a73PIWjwzhRRYyxpmtBn9gDTUgw5bN0EHzVsvKmn0XuLG98FewsZjMbfFJdYBykr/wWRNNuTQXdYIFAz9BlUY1wpxPPjmKZVQWKN0lj3sl/BgWamMGQffowdDIC189387eBE7boi90IjtmTw/aClkkmYa0YabW0dzF5gwbr24SXz1J35KjiLWbT3M1KSKFaNPNSfDgGyL53ds9gp6uqlS95r6cS7pa1grvU=
+  on:
+    tags: true
