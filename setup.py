@@ -8,7 +8,7 @@ setup(
     name='iZettle',
     packages=find_packages(include=['iZettle']),
     version='0.3.0',
-    description='',
+    description='Unofficial python integration for iZettle API',
     author='Aleksi Wikman',
     author_email='aleksi@vilkas.fi',
     url='https://github.com/vilkasgroup/iZettle',
