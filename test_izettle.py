@@ -4,7 +4,7 @@ import unittest
 import logging
 import uuid
 import time
-from iZettle import Izettle, RequestException
+from iZettle.iZettle import Izettle, RequestException
 
 logger = logging.getLogger()
 logger.level = logging.DEBUG
