@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 requirements = [
     'requests',
@@ -6,7 +6,7 @@ requirements = [
 
 setup(
     name='iZettle',
-    packages=find_packages(include=['iZettle']),
+    packages='iZettle',
     version='0.3.1',
     description='Unofficial python integration for iZettle API',
     author='Aleksi Wikman',
