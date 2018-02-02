@@ -7,7 +7,7 @@ requirements = [
 setup(
     name='iZettle',
     packages='iZettle',
-    version='0.3.1',
+    version='0.3.2',
     description='Unofficial python integration for iZettle API',
     author='Aleksi Wikman',
     author_email='aleksi@vilkas.fi',
